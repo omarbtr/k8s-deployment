@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sqlserver-initdb
+  namespace: consolide
+data:
+  01-init-ConsolideUsersDB.sql: |
+    CREATE DATABASE ConsolideUsersDB;
+    GO
+    USE ConsolideUsersDB;
+    GO
+
+    CREATE TABLE Users (
+      Id INT PRIMARY KEY IDENTITY,
+      UserName NVARCHAR(50),
+      Password NVARCHAR(50),
+      Role NVARCHAR(20)
+    );
+    GO
+
+    INSERT INTO Users (UserName, Password, Role)
+    VALUES ('admin', 'admin123', 'Admin');
+    GO
+
+  02-init-ConsolideDB.sql: |
+    CREATE DATABASE ConsolideDB;
+    GO
+    USE ConsolideDB;
+    GO
+
+    CREATE TABLE Transactions (
+      Id INT PRIMARY KEY IDENTITY,
+      UserId INT,
+      Amount DECIMAL(10, 2),
+      CreatedAt DATETIME DEFAULT GETDATE()
+    );
+    GO
+

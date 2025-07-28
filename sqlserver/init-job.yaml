@@ -1,0 +1,80 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sqlserver-init-custom
+  namespace: consolide
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: sqlserver-init
+          image: mcr.microsoft.com/mssql/server:2022-latest
+          env:
+            - name: SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sqlserver-secret
+                  key: SA_PASSWORD
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "🚀 Attente que SQL Server soit accessible..."
+              
+              # Attendre que SQL Server soit prêt
+              for i in {1..30}; do
+                if /opt/mssql-tools18/bin/sqlcmd -S sqlserver.consolide.svc.cluster.local,1433 -U sa -P "$SA_PASSWORD" -Q "SELECT 1" -C >/dev/null 2>&1; then
+                  echo "✅ SQL Server accessible!"
+                  break
+                fi
+                echo "Tentative $i/30... (attente 15s)"
+                sleep 15
+              done
+
+              # Vérification finale
+              if ! /opt/mssql-tools18/bin/sqlcmd -S sqlserver.consolide.svc.cluster.local,1433 -U sa -P "$SA_PASSWORD" -Q "SELECT 1" -C >/dev/null 2>&1; then
+                echo "❌ Impossible de se connecter à SQL Server"
+                exit 1
+              fi
+
+              echo "📊 Exécution du script ConsolideUsersDB..."
+              
+              # Exécuter le script ConsolideUsersDB
+              if /opt/mssql-tools18/bin/sqlcmd -S sqlserver.consolide.svc.cluster.local,1433 -U sa -P "$SA_PASSWORD" -i /scripts/01-init-ConsolideUsersDB.sql -C; then
+                echo "✅ Script ConsolideUsersDB exécuté avec succès"
+              else
+                echo "❌ Erreur lors de l'exécution du script ConsolideUsersDB"
+                # Ne pas arrêter, continuer avec le suivant
+              fi
+
+              echo "📊 Exécution du script ConsolideDB..."
+              
+              # Exécuter le script ConsolideDB
+              if /opt/mssql-tools18/bin/sqlcmd -S sqlserver.consolide.svc.cluster.local,1433 -U sa -P "$SA_PASSWORD" -i /scripts/02-init-ConsolideDB.sql -C; then
+                echo "✅ Script ConsolideDB exécuté avec succès"
+              else
+                echo "❌ Erreur lors de l'exécution du script ConsolideDB"
+              fi
+
+              echo "✅ Initialisation terminée!"
+              
+              # Vérification finale
+              echo "🔍 Vérification des bases créées:"
+              /opt/mssql-tools18/bin/sqlcmd -S sqlserver.consolide.svc.cluster.local,1433 -U sa -P "$SA_PASSWORD" -C -Q "SELECT name FROM sys.databases WHERE name IN ('ConsolideUsersDB', 'ConsolideDB')"
+              
+              # Vérifier les tables dans ConsolideUsersDB
+              echo "🔍 Tables dans ConsolideUsersDB:"
+              /opt/mssql-tools18/bin/sqlcmd -S sqlserver.consolide.svc.cluster.local,1433 -U sa -P "$SA_PASSWORD" -d ConsolideUsersDB -C -Q "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'"
+              
+              # Vérifier les tables dans ConsolideDB
+              echo "🔍 Tables dans ConsolideDB:"
+              /opt/mssql-tools18/bin/sqlcmd -S sqlserver.consolide.svc.cluster.local,1433 -U sa -P "$SA_PASSWORD" -d ConsolideDB -C -Q "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'"
+
+          volumeMounts:
+            - name: sql-scripts
+              mountPath: /scripts
+      volumes:
+        - name: sql-scripts
+          configMap:
+            name: sqlserver-scripts

@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mstransaction
+  namespace: consolide
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mstransaction
+  template:
+    metadata:
+      labels:
+        app: mstransaction
+    spec:
+      containers:
+        - name: mstransaction
+          image: omarbtr/consolide-mstransaction:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 8081
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+            - name: ASPNETCORE_URLS
+              value: http://+:8080;http://+:8081

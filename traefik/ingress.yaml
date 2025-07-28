@@ -1,0 +1,191 @@
+# ingress.yaml - Configuration corrigée pour Swagger
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-ingress
+  namespace: consolide
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  ingressClassName: traefik
+  rules:
+    # API Gateway (normal)
+    - host: gateway.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: apigateway
+                port:
+                  number: 80
+    
+    # User Service - Swagger paths
+    - host: user.local
+      http:
+        paths:
+          # Route principale pour Swagger UI
+          - path: /swagger
+            pathType: Prefix
+            backend:
+              service:
+                name: msuser
+                port:
+                  number: 80
+          # Route pour index.html
+          - path: /swagger/index.html
+            pathType: Exact
+            backend:
+              service:
+                name: msuser
+                port:
+                  number: 80
+          # Route pour les assets Swagger
+          - path: /swagger/
+            pathType: Prefix
+            backend:
+              service:
+                name: msuser
+                port:
+                  number: 80
+          # Route API
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: msuser
+                port:
+                  number: 80
+          # Route racine avec redirection
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: msuser
+                port:
+                  number: 80
+    
+    # Transaction Service - Swagger paths
+    - host: transaction.local
+      http:
+        paths:
+          # Route principale pour Swagger UI
+          - path: /swagger
+            pathType: Prefix
+            backend:
+              service:
+                name: mstransaction
+                port:
+                  number: 80
+          # Route pour index.html
+          - path: /swagger/index.html
+            pathType: Exact
+            backend:
+              service:
+                name: mstransaction
+                port:
+                  number: 80
+          # Route pour les assets Swagger
+          - path: /swagger/
+            pathType: Prefix
+            backend:
+              service:
+                name: mstransaction
+                port:
+                  number: 80
+          # Route API
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: mstransaction
+                port:
+                  number: 80
+          # Route racine avec redirection
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mstransaction
+                port:
+                  number: 80
+    
+    # Routes monitoring (inchangées)
+    - host: prometheus.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: prometheus
+                port:
+                  number: 9090
+    - host: grafana.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 3000
+    - host: traefik.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: traefik
+                port:
+                  number: 8080
+
+---
+# Ingress alternatif avec middleware de redirection
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: swagger-redirect-ingress
+  namespace: consolide
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    # Middleware pour rediriger automatiquement vers /swagger
+    traefik.ingress.kubernetes.io/router.middlewares: consolide-swagger-redirect@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: user.local
+      http:
+        paths:
+          - path: /
+            pathType: Exact
+            backend:
+              service:
+                name: msuser
+                port:
+                  number: 80
+    - host: transaction.local
+      http:
+        paths:
+          - path: /
+            pathType: Exact
+            backend:
+              service:
+                name: mstransaction
+                port:
+                  number: 80
+
+---
+# Middleware pour redirection automatique vers Swagger
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: swagger-redirect
+  namespace: consolide
+spec:
+  redirectRegex:
+    regex: "^(.*)/?"
+    replacement: "${1}/swagger/"

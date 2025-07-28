@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: msuser
+  namespace: consolide
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: msuser
+  template:
+    metadata:
+      labels:
+        app: msuser
+    spec:
+      containers:
+        - name: msuser
+          image: omarbtr/consolide-msuser:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 8081
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+            - name: ASPNETCORE_URLS
+              value: http://+:8080;http://+:8081

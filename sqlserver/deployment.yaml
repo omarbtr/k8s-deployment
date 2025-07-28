@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sqlserver
+  namespace: consolide
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sqlserver
+  template:
+    metadata:
+      labels:
+        app: sqlserver
+    spec:
+      containers:
+        - name: sqlserver
+          image: mcr.microsoft.com/mssql/server:2022-latest
+          ports:
+            - containerPort: 1433
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+            - name: SA_PASSWORD
+              value: "YourStrong!Passw0rd"
+            - name: MSSQL_PID
+              value: "Express"
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          # AJOUT DU VOLUME MOUNT POUR PERSISTANCE
+          volumeMounts:
+            - name: sqlserver-storage
+              mountPath: /var/opt/mssql
+          readinessProbe:
+            tcpSocket:
+              port: 1433
+            initialDelaySeconds: 60
+            periodSeconds: 15
+          livenessProbe:
+            tcpSocket:
+              port: 1433
+            initialDelaySeconds: 120
+            periodSeconds: 30
+          startupProbe:
+            tcpSocket:
+              port: 1433
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 20
+      # AJOUT DU VOLUME
+      volumes:
+        - name: sqlserver-storage
+          persistentVolumeClaim:
+            claimName: sqlserver-pvc
