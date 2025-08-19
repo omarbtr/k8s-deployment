@@ -6,16 +6,16 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/omarbtr/k8s-deployment.git
-    targetRevision: main   # ou master selon ta branche
-    path: home/k8s-deployment
+    repoURL: https://github.com/omarbtr/k8s-deployment
+    targetRevision: main
+    path: .
   destination:
     server: https://kubernetes.default.svc
     namespace: consolide
   syncPolicy:
-    automated:   # déploiement automatique (GitOps pur)
-      prune: true    # supprime les ressources obsolètes
-      selfHeal: true # corrige les dérives
+    automated:
+      prune: false
+      selfHeal: false
     syncOptions:
       - CreateNamespace=true
 
