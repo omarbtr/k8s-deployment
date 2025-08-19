@@ -24,10 +24,3 @@ spec:
               value: Development
             - name: ASPNETCORE_URLS
               value: http://+:8080;http://+:8081
-          resources:
-            requests:
-              cpu: "100m"       # réserve minimale de CPU
-              memory: "128Mi"   # réserve minimale de RAM
-            limits:
-              cpu: "500m"       # maximum CPU autorisé
-              memory: "512Mi"   # maximum mémoire autorisée
