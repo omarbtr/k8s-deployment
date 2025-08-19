@@ -9,10 +9,29 @@ spec:
     repoURL: https://github.com/omarbtr/k8s-deployment
     targetRevision: main
     path: .
+    directory:
+      recurse: true
+      exclude: 'argocd/**'  # Exclure le dossier argocd pour éviter les boucles
   destination:
     server: https://kubernetes.default.svc
     namespace: consolide
   syncPolicy:
     syncOptions:
       - CreateNamespace=true
-
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    # Pas de automated - synchronisation manuelle uniquement
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  # Configuration pour une meilleure visibilité des changements
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+  # Activer les annotations pour voir les détails des changements
+  revisionHistoryLimit: 10
