@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: consolide-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/omarbtr/k8s-deployment.git
+    targetRevision: main   # ou master selon ta branche
+    path: home/k8s-deployment
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: consolide
+  syncPolicy:
+    automated:   # déploiement automatique (GitOps pur)
+      prune: true    # supprime les ressources obsolètes
+      selfHeal: true # corrige les dérives
+    syncOptions:
+      - CreateNamespace=true
+
